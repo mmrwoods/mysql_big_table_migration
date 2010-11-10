@@ -1,0 +1,6 @@
+mysql:
+  adapter: mysql
+  username: dev
+  password: password
+  database: mysql_big_table_migration_test
+  host: 127.0.0.1
