@@ -2,8 +2,8 @@ MysqlBigTableMigration
 ======================
                               
 A Rails plugin that adds methods to ActiveRecord::Migration to allow columns 
-and indexed to be added to and removed from large tables, with millions of 
-rows, in MySQL, without leaving processes seemingly stalled in state "copy 
+and indexes to be added to and removed from large tables with millions of
+rows in MySQL, without leaving processes seemingly stalled in state "copy
 to tmp table".
                                     
 For each of the standard transformations that operate on columns or indexes, 
