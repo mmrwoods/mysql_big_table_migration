@@ -44,7 +44,7 @@ module MySQLBigTableMigration
     
     def connection ; ActiveRecord::Base.connection ; end
     
-    def with_tmp_table(table_name, &block)
+    def with_tmp_table(table_name)
     
       raise ArgumentError, "block expected" unless block_given?
     
