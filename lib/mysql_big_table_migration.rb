@@ -83,11 +83,13 @@ module MySQLBigTableMigration
         batch_size = 10000
         counter = 0
         say "Inserting into temporary table in batches of #{batch_size}..."
-        while counter < connection.execute("SELECT MAX(id) FROM #{table_name}").fetch_row[0].to_i 
-          say "Processing rows with ids between #{counter+1} and #{counter+batch_size}", true
+        while counter < ( max_id = connection.execute("SELECT MAX(id) FROM #{table_name}").fetch_row[0].to_i )
+          percentage_complete = ( ( counter.to_f / max_id.to_f ) * 100 ).to_i
+          say "Processing rows with ids between #{counter+1} and #{counter+batch_size} (#{percentage_complete}% complete)" , true
           connection.execute("INSERT INTO #{new_table_name} (#{columns_to_copy}) SELECT #{columns_to_copy} FROM #{table_name} WHERE id > #{counter} AND id <= #{counter + batch_size}")
           counter = counter + batch_size
         end
+        say "Finished inserting into temporary table"
       
       rescue Exception => e
         drop_table new_table_name
