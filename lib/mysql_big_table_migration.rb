@@ -110,7 +110,7 @@ module MySQLBigTableMigration
       begin
         connection.execute("LOCK TABLES #{table_name} WRITE, #{old_table_name} READ")
         recently_created_or_updated_conditions = "id > #{max_id_before_migration}"
-        recently_created_or_updated_conditions << " OR updated_at > '#{timestamp_before_migration}'" if old_column_names.include?(:updated_at)
+        recently_created_or_updated_conditions << " OR updated_at > '#{timestamp_before_migration}'" if old_column_names.map(&:to_s).include?('updated_at')
         connection.execute("REPLACE INTO #{table_name} (#{columns_to_copy}) SELECT #{columns_to_copy} FROM #{old_table_name} WHERE #{recently_created_or_updated_conditions}")
       rescue Exception => e
         puts "Failed to lock tables and do final cleanup. This may not be anything to worry about, especially on an infrequently used table."
