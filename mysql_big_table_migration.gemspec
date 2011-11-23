@@ -1,5 +1,4 @@
 $LOAD_PATH.unshift 'lib'
-require "mysql_big_table_migration/version"
 
 Gem::Specification.new do |s|
   s.name              = "mysql_big_table_migration"
