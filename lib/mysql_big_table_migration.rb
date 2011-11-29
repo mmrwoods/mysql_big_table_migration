@@ -30,6 +30,10 @@ module MySQLBigTableMigration
       with_tmp_table(table_name) { |tmp_table_name| rename_column(tmp_table_name, column_name, new_column_name) }
     end
   
+    def change_column_using_tmp_table(table_name, column_name, type, options={})
+      with_tmp_table(table_name) { |tmp_table_name| change_column(tmp_table_name, column_name, type, options) }
+    end
+
     def add_index_using_tmp_table(table_name, column_name, options={})
       # generate the index name using the original table name if no name provided
       options[:name] = index_name(table_name, :column => Array(column_name)) if options[:name].nil? 
