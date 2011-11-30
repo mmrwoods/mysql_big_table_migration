@@ -128,3 +128,7 @@ module MySQLBigTableMigration
   end
   
 end
+
+class ActiveRecord::Migration
+  include MySQLBigTableMigration
+end
