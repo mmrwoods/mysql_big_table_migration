@@ -25,10 +25,14 @@ module MySQLBigTableMigration
         end
       end
     end
-  
-    def rename_column_using_tmp_table(table_name, column_name, new_column_name)
-      with_tmp_table(table_name) { |tmp_table_name| rename_column(tmp_table_name, column_name, new_column_name) }
-    end
+
+    # This doesn't work, because only the data from columns present in both the old and new table is synced. So if
+    # column A is being renamed to B, and data in A changes in rows that have already been copied to the tmp table,
+    # those changes will be reverted when the tmp table becomes the
+    #
+    #def rename_column_using_tmp_table(table_name, column_name, new_column_name)
+    #  with_tmp_table(table_name) { |tmp_table_name| rename_column(tmp_table_name, column_name, new_column_name) }
+    #end
   
     def change_column_using_tmp_table(table_name, column_name, type, options={})
       with_tmp_table(table_name) { |tmp_table_name| change_column(tmp_table_name, column_name, type, options) }
