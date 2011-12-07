@@ -27,7 +27,7 @@ require "#{name}/version"
 
 Gem::Specification.new do |s|
   s.name              = "#{name}"
-  s.version           = #{name.capitalize}::VERSION
+  s.version           = "1.0.3"
   s.date              = Time.now.strftime('%Y-%m-%d')
   s.summary           = "Feed me."
   s.homepage          = "http://github.com/#{login}/#{name}"
