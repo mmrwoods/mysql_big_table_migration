@@ -2,7 +2,7 @@ $LOAD_PATH.unshift 'lib'
 
 Gem::Specification.new do |s|
   s.name              = "mysql_big_table_migration"
-  s.version           = "0.0.2"
+  s.version           = "0.0.3"
   s.date              = Time.now.strftime('%Y-%m-%d')
   s.summary           = "allow columns and indexes to be added to and removed from large tables"
   s.homepage          = "http://github.com/analog-analytics/mysql_big_table_migration"
