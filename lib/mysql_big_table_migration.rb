@@ -133,6 +133,8 @@ module MySQLBigTableMigration
   
 end
 
-class ActiveRecord::Migration
-  include MySQLBigTableMigration
+if Object.const_defined?("ActiveRecord")
+  class ActiveRecord::Migration
+    include MySQLBigTableMigration
+  end
 end
