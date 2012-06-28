@@ -1,5 +1,10 @@
 module MySQLBigTableMigration
 
+  SUPPORTED_ADAPTERS = [
+    "ActiveRecord::ConnectionAdapters::MysqlAdapter",
+    "ActiveRecord::ConnectionAdapters::Mysql2Adapter"
+  ]
+
   def self.included(base)
     base.extend(ClassMethods)
   end
@@ -51,12 +56,30 @@ module MySQLBigTableMigration
     private
     
     def connection ; ActiveRecord::Base.connection ; end
+
+    def each_result_hash(result, &block)
+      case connection.class.name
+      when "ActiveRecord::ConnectionAdapters::MysqlAdapter"
+        result.each_hash(&block)
+      when "ActiveRecord::ConnectionAdapters::Mysql2Adapter"
+        result.each(:as => :hash, &block)
+      end
+    end
+
+    def fetch_result_row(result)
+      case connection.class.name
+      when "ActiveRecord::ConnectionAdapters::MysqlAdapter"
+        result.fetch_row
+      when "ActiveRecord::ConnectionAdapters::Mysql2Adapter"
+        result.first
+      end
+    end
     
     def with_tmp_table(table_name)
     
       raise ArgumentError, "block expected" unless block_given?
     
-      unless connection.class.name == "ActiveRecord::ConnectionAdapters::MysqlAdapter"
+      unless SUPPORTED_ADAPTERS.include? connection.class.name
         puts "Warning: Unsupported connection adapter '#{connection.class.name}' for MySQL Big Table Migration Plugin"
         puts "         Migration methods will still be executed, but without using a temp table."
         yield table_name
@@ -78,25 +101,25 @@ module MySQLBigTableMigration
         # get column names to copy *after* yielding to block - could drop a column from new table
         # note: do not get column names using the column_names method, we need to make sure we avoid obtaining a cached array of column names
         old_column_names = [] 
-        connection.execute("DESCRIBE #{table_name}").each_hash{ |row| old_column_names << row['Field'] } # see ruby mysql docs for more info
+        each_result_hash(connection.execute("DESCRIBE #{table_name}")) { |row| old_column_names << row['Field'] } # see ruby mysql docs for more info
         new_column_names = []
-        connection.execute("DESCRIBE #{new_table_name}").each_hash{ |row| new_column_names << row['Field'] }
+        each_result_hash(connection.execute("DESCRIBE #{new_table_name}")) { |row| new_column_names << row['Field'] }
 
         # columns to copy is intersection of old and new - i.e. only columns in both tables
         columns_to_copy = "`" + ( old_column_names & new_column_names ).join("`, `") + "`"
 
-        timestamp_before_migration = connection.execute("SELECT CURRENT_TIMESTAMP").fetch_row[0] # note: string, not time object
-        max_id_before_migration = connection.execute("SELECT MAX(id) FROM #{table_name}").fetch_row[0].to_i
+        timestamp_before_migration = fetch_result_row(connection.execute("SELECT CURRENT_TIMESTAMP"))[0] # note: string, not time object
+        max_id_before_migration = fetch_result_row(connection.execute("SELECT MAX(id) FROM #{table_name}"))[0].to_i
 
         if max_id_before_migration == 0
           say "Source table is empty, no rows to copy into temporary table"
         else
           batch_size = 10000
-          start = connection.execute("SELECT MIN(id) FROM #{table_name}").fetch_row[0].to_i
+          start = fetch_result_row(connection.execute("SELECT MIN(id) FROM #{table_name}"))[0].to_i
           counter = start
           say "Inserting into temporary table in batches of #{batch_size}..."
           say "Approximately #{max_id_before_migration-start+1} rows to process, first row has id #{start}", true
-          while counter < ( max = connection.execute("SELECT MAX(id) FROM #{table_name}").fetch_row[0].to_i )
+          while counter < ( max = fetch_result_row(connection.execute("SELECT MAX(id) FROM #{table_name}"))[0].to_i )
             percentage_complete = ( ( ( counter - start ).to_f / ( max - start ).to_f ) * 100 ).to_i
             say "Processing rows with ids between #{counter} and #{(counter+batch_size)-1} (#{percentage_complete}% complete)", true
             connection.execute("INSERT INTO #{new_table_name} (#{columns_to_copy}) SELECT #{columns_to_copy} FROM #{table_name} WHERE id >= #{counter} AND id < #{counter + batch_size}")
