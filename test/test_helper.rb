@@ -28,7 +28,7 @@ def load_fixtures
 end
 
 def assert_valid_database_setup
-  fields = result_hashes(connection.execute("DESCRIBE test_table"))
+  fields = result_hashes("DESCRIBE test_table")
   assert_equal 3, fields.length
   assert_equal "id", fields[0]["Field"]
   assert_equal "int(11)", fields[0]["Type"]
@@ -37,18 +37,19 @@ def assert_valid_database_setup
   assert_equal "bar", fields[2]["Field"]
   assert_equal "varchar(255)", fields[2]["Type"]
 
-  indexes = result_hashes(connection.execute("SHOW INDEX FROM test_table"))
+  indexes = result_hashes("SHOW INDEX FROM test_table")
   assert_equal 2, indexes.length
   assert_equal "id", indexes[0]["Column_name"]
   assert_equal "foo", indexes[1]["Column_name"]
 
-  results = result_hashes(connection.execute("SELECT * FROM test_table"))
+  results = result_hashes("SELECT * FROM test_table")
   assert_equal 5, results.length
   assert_equal "foo2", results[2]["foo"]
   assert_equal "bar3", results[3]["bar"]
 end
 
-def result_hashes(result)
+def result_hashes(query)
+  result = connection.execute(query)
   case connection
   when ActiveRecord::ConnectionAdapters::MysqlAdapter
     result.all_hashes

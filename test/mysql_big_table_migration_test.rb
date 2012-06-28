@@ -21,12 +21,12 @@ class MysqlBigTableMigrationTest < Test::Unit::TestCase
       ActiveRecord::Migration.add_column_using_tmp_table(:test_table, :baz, :string)
     end
 
-    fields = result_hashes(connection.execute("DESCRIBE test_table"))
+    fields = result_hashes("DESCRIBE test_table")
     assert_equal 4, fields.length
     assert_equal "baz", fields[3]["Field"]
     assert_equal "varchar(255)", fields[3]["Type"]
 
-    results = result_hashes(connection.execute("SELECT * FROM test_table"))
+    results = result_hashes("SELECT * FROM test_table")
     assert_equal 5, results.length
     assert_equal "foo2", results[2]["foo"]
     assert_equal "bar3", results[3]["bar"]
@@ -38,15 +38,37 @@ class MysqlBigTableMigrationTest < Test::Unit::TestCase
       ActiveRecord::Migration.remove_column_using_tmp_table(:test_table, :bar)
     end
 
-    fields = result_hashes(connection.execute("DESCRIBE test_table"))
+    fields = result_hashes("DESCRIBE test_table")
     assert_equal 2, fields.length
     assert_equal "id", fields[0]["Field"]
     assert_equal "foo", fields[1]["Field"]
 
-    results = result_hashes(connection.execute("SELECT * FROM test_table"))
+    results = result_hashes("SELECT * FROM test_table")
     assert_equal 5, results.length
     assert_equal "foo2", results[2]["foo"]
     assert !results[3].has_key?("bar")
+  end
+
+  test_against_all_configs :rename_column_using_tmp_table do
+    silence_stream($stdout) do
+      ActiveRecord::Migration.rename_column_using_tmp_table(:test_table, :foo, :baz)
+    end
+
+    fields = result_hashes("DESCRIBE test_table")
+    assert_equal 3, fields.length
+    assert_equal "id", fields[0]["Field"]
+    assert_equal "int(11)", fields[0]["Type"]
+    assert_equal "baz", fields[1]["Field"]
+    assert_equal "varchar(255)", fields[1]["Type"]
+    assert_equal "bar", fields[2]["Field"]
+    assert_equal "varchar(255)", fields[2]["Type"]
+
+    results = result_hashes("SELECT * FROM test_table")
+    assert_equal 5, results.length
+    5.times do |i|
+      assert_equal "foo#{i}", results[i]["baz"]
+      assert_equal "bar#{i}", results[i]["bar"]
+    end
   end
 
   test_against_all_configs :change_column_using_tmp_table do
@@ -54,14 +76,14 @@ class MysqlBigTableMigrationTest < Test::Unit::TestCase
       ActiveRecord::Migration.change_column_using_tmp_table(:test_table, :bar, :text)
     end
 
-    fields = result_hashes(connection.execute("DESCRIBE test_table"))
+    fields = result_hashes("DESCRIBE test_table")
     assert_equal 3, fields.length
     assert_equal "id", fields[0]["Field"]
     assert_equal "foo", fields[1]["Field"]
     assert_equal "bar", fields[2]["Field"]
     assert_equal "text", fields[2]["Type"]
 
-    results = result_hashes(connection.execute("SELECT * FROM test_table"))
+    results = result_hashes("SELECT * FROM test_table")
     assert_equal 5, results.length
     assert_equal "foo2", results[2]["foo"]
     assert_equal "bar3", results[3]["bar"]
@@ -72,7 +94,7 @@ class MysqlBigTableMigrationTest < Test::Unit::TestCase
       ActiveRecord::Migration.add_index_using_tmp_table(:test_table, :bar)
     end
 
-    indexes = result_hashes(connection.execute("SHOW INDEX FROM test_table"))
+    indexes = result_hashes("SHOW INDEX FROM test_table")
     assert_equal 3, indexes.length
     assert_equal "id", indexes[0]["Column_name"]
     assert_equal "foo", indexes[1]["Column_name"]
@@ -84,9 +106,97 @@ class MysqlBigTableMigrationTest < Test::Unit::TestCase
       ActiveRecord::Migration.remove_index_using_tmp_table(:test_table, :foo)
     end
 
-    indexes = result_hashes(connection.execute("SHOW INDEX FROM test_table"))
+    indexes = result_hashes("SHOW INDEX FROM test_table")
     assert_equal 1, indexes.length
     assert_equal "id", indexes[0]["Column_name"]
   end
 
+  test_against_all_configs :rename_with_remove do
+    silence_stream($stdout) do
+      ActiveRecord::Migration.with_tmp_table(:test_table) do |tmp_table_name|
+        ActiveRecord::Migration.rename_column tmp_table_name, :bar, :baz
+        ActiveRecord::Migration.remove_column tmp_table_name, :foo
+      end
+    end
+
+    fields = result_hashes("DESCRIBE test_table")
+    assert_equal 2, fields.length
+    assert_equal "id", fields[0]["Field"]
+    assert_equal "baz", fields[1]["Field"]
+
+    results = result_hashes("SELECT * FROM test_table")
+    assert_equal 5, results.length
+    5.times do |i|
+      assert_equal "bar#{i}", results[i]["baz"]
+    end
+  end
+
+  test_against_all_configs :rename_with_add do
+    silence_stream($stdout) do
+      ActiveRecord::Migration.with_tmp_table(:test_table) do |tmp_table_name|
+        ActiveRecord::Migration.rename_column tmp_table_name, :bar, :baz
+        ActiveRecord::Migration.add_column tmp_table_name, :dummy, :integer
+      end
+    end
+
+    fields = result_hashes("DESCRIBE test_table")
+    assert_equal 4, fields.length
+    assert_equal "id", fields[0]["Field"]
+    assert_equal "foo", fields[1]["Field"]
+    assert_equal "baz", fields[2]["Field"]
+    assert_equal "dummy", fields[3]["Field"]
+
+    results = result_hashes("SELECT * FROM test_table")
+    assert_equal 5, results.length
+    5.times do |i|
+      assert_equal "foo#{i}", results[i]["foo"]
+      assert_equal "bar#{i}", results[i]["baz"]
+      assert_equal nil, results[i]["dummy"]
+    end
+  end
+
+  test_against_all_configs :rename_with_change do
+    silence_stream($stdout) do
+      ActiveRecord::Migration.with_tmp_table(:test_table) do |tmp_table_name|
+        ActiveRecord::Migration.rename_column tmp_table_name, :bar, :baz
+        ActiveRecord::Migration.change_column tmp_table_name, :foo, :integer
+      end
+    end
+
+    fields = result_hashes("DESCRIBE test_table")
+    assert_equal 3, fields.length
+    assert_equal "id", fields[0]["Field"]
+    assert_equal "foo", fields[1]["Field"]
+    assert_equal "int(11)", fields[1]["Type"]
+    assert_equal "baz", fields[2]["Field"]
+
+    results = result_hashes("SELECT * FROM test_table")
+    assert_equal 5, results.length
+    5.times do |i|
+      assert results[i]["foo"] == "0" || results[i]["foo"] == 0
+      assert_equal "bar#{i}", results[i]["baz"]
+    end
+  end
+
+  test_against_all_configs :rename_with_rename do
+    silence_stream($stdout) do
+      ActiveRecord::Migration.with_tmp_table(:test_table) do |tmp_table_name|
+        ActiveRecord::Migration.rename_column tmp_table_name, :bar, :baz
+        ActiveRecord::Migration.rename_column tmp_table_name, :foo, :dummy
+      end
+    end
+
+    fields = result_hashes("DESCRIBE test_table")
+    assert_equal 3, fields.length
+    assert_equal "id", fields[0]["Field"]
+    assert_equal "dummy", fields[1]["Field"]
+    assert_equal "baz", fields[2]["Field"]
+
+    results = result_hashes("SELECT * FROM test_table")
+    assert_equal 5, results.length
+    5.times do |i|
+      assert_equal "foo#{i}", results[i]["dummy"]
+      assert_equal "bar#{i}", results[i]["baz"]
+    end
+  end
 end
