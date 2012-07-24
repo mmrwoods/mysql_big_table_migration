@@ -3,9 +3,6 @@ ActiveRecord::Schema.define(:version => 0) do
     t.string :foo
     t.string :bar
   end
-  create_table :table_with_timestamps, :force => true do |t|
-    t.string :foo
-    t.string :bar
-    t.timestamps
-  end  
+
+  add_index :test_table, [:foo]
 end
