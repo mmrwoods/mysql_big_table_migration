@@ -2,9 +2,26 @@ require 'rubygems'
 require 'fileutils'
 require 'test/unit'
 require 'active_record'
+require 'active_record/connection_adapters/mysql_adapter'
+require 'active_support'
+require 'active_support/core_ext'
+require 'mysql'
+require 'logger'
 require File.dirname(__FILE__) + "/../lib/mysql_big_table_migration"
 
 TEST_CONFIGS = ["mysql", "mysql2"]
+
+Mysql::Result.class_eval do
+  unless respond_to?(:all_hashes)
+    def all_hashes
+      rows = []
+      each_hash do |row|
+        rows << row
+      end
+      rows
+    end
+  end
+end
 
 def read_log_file
   @log.string

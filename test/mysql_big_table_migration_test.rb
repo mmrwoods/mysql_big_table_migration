@@ -4,8 +4,14 @@ class MysqlBigTableMigrationTest < Test::Unit::TestCase
   extend DatabaseTest
   
   test_against_all_configs :methods_are_added_to_migration do
-    MySQLBigTableMigration::ClassMethods.instance_methods(false).each do |method|
-      assert_respond_to ActiveRecord::Migration, method
+    if Rails::VERSION::STRING < "3.0"
+      method_target = ActiveRecord::Migration
+    else
+      method_target = ActiveRecord::Migration.new
+    end
+
+    MySQLBigTableMigration.instance_methods(false).each do |method|
+      assert_respond_to method_target, method
     end
   end
 
