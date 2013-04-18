@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/test_helper.rb'
+require_relative 'test_helper'
 
 class MysqlBigTableMigrationTest < Test::Unit::TestCase
   extend DatabaseTest
@@ -202,6 +202,25 @@ class MysqlBigTableMigrationTest < Test::Unit::TestCase
     assert_equal 5, results.length
     5.times do |i|
       assert_equal "foo#{i}", results[i]["dummy"]
+      assert_equal "bar#{i}", results[i]["baz"]
+    end
+  end
+
+  test_against_all_configs :rename_column do
+    silence_stream($stdout) do
+      ActiveRecord::Migration.rename_column :test_table, :bar, :baz
+    end
+
+    fields = test_table_fields
+    assert_equal 3, fields.length
+    assert_equal "id", fields[0]["Field"]
+    assert_equal "foo", fields[1]["Field"]
+    assert_equal "baz", fields[2]["Field"]
+
+    results = test_table_rows
+    assert_equal 5, results.length
+    5.times do |i|
+      assert_equal "foo#{i}", results[i]["foo"]
       assert_equal "bar#{i}", results[i]["baz"]
     end
   end

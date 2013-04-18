@@ -8,6 +8,7 @@ module MySQLBigTableMigration
   ]
 
   def rename_column(table, old_name, new_name)
+    push_state unless @state_stack.try(:any?)
     current_state[:renames] ||= {}
     current_state[:renames][old_name] = new_name
     super
