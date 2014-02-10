@@ -95,12 +95,12 @@ module MySQLBigTableMigration
       if max_id_before_migration == 0
         say "Source table is empty, no rows to copy into temporary table"
       else
-        batch_size = 10000
+        batch_size = mysql_big_table_migration_bach_size
         start = fetch_result_row(connection.execute("SELECT MIN(id) FROM #{table_name}"))[0].to_i
         counter = start
         say "Inserting into temporary table in batches of #{batch_size}..."
         say "Approximately #{max_id_before_migration-start+1} rows to process, first row has id #{start}", true
-        while counter < ( max = fetch_result_row(connection.execute("SELECT MAX(id) FROM #{table_name}"))[0].to_i )
+        while counter <= ( max = fetch_result_row(connection.execute("SELECT MAX(id) FROM #{table_name}"))[0].to_i )
           percentage_complete = ( ( ( counter - start ).to_f / ( max - start ).to_f ) * 100 ).to_i
           say "Processing rows with ids between #{counter} and #{(counter+batch_size)-1} (#{percentage_complete}% complete)", true
           connection.execute("INSERT INTO #{new_table_name} (#{new_column_list}) SELECT #{old_column_list} FROM #{table_name} WHERE id >= #{counter} AND id < #{counter + batch_size}")
@@ -134,6 +134,10 @@ module MySQLBigTableMigration
   end
 
   private
+
+  def mysql_big_table_migration_bach_size
+    10000
+  end
 
   def connection
     ActiveRecord::Base.connection
