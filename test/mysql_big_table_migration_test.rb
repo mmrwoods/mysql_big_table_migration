@@ -2,7 +2,7 @@ require_relative 'test_helper'
 
 class MysqlBigTableMigrationTest < Test::Unit::TestCase
   extend DatabaseTest
-  
+
   test_against_all_configs :methods_are_added_to_migration do
     if Rails::VERSION::STRING < "3.0"
       method_target = ActiveRecord::Migration
@@ -20,6 +20,29 @@ class MysqlBigTableMigrationTest < Test::Unit::TestCase
       ActiveRecord::Migration.send(:with_tmp_table, :test_table) {}
     end
     assert_match "CREATE TABLE tmp_new_test_table LIKE test_table", read_log_file
+  end
+
+  class SmallBatchMigration < ActiveRecord::Migration
+    def mysql_big_table_migration_bach_size
+      4
+    end
+  end
+
+  test_against_all_configs :with_tmp_table_copies_all_rows do
+    silence_stream($stdout) do
+      SmallBatchMigration.new.send(:with_tmp_table, :test_table) {}
+    end
+
+    assert_equal 5, test_table_rows.length
+  end
+
+
+  test_against_all_configs :with_exactly_one_row, fixture_row_count: 1 do
+    silence_stream($stdout) do
+      ActiveRecord::Migration.send(:with_tmp_table, :test_table) {}
+    end
+
+    assert_equal 1, test_table_rows.length
   end
 
   test_against_all_configs :add_column_using_tmp_table do
