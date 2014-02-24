@@ -136,7 +136,9 @@ module MySQLBigTableMigration
   private
 
   def mysql_big_table_migration_completion(start, counter, max)
-    ((counter - start + 1).to_f / (( max - start + 1).to_f ) * 100 ).to_i
+    number_done = counter - start + 1
+    number_to_do = max - start + 1
+    (number_done * 100 / number_to_do.to_f).to_i
   end
 
   def mysql_big_table_migration_bach_size
