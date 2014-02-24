@@ -35,16 +35,16 @@ def load_schema(adapter)
   load(File.dirname(__FILE__) + "/schema.rb")
 end
 
-def load_fixtures
+def load_fixtures(options = {})
   connection = ActiveRecord::Base.connection
 
   connection.execute("DELETE FROM test_table;")
-  5.times do |i|
+  (options[:fixture_row_count] || 5).times do |i|
     connection.execute("INSERT INTO test_table (foo, bar) VALUES ('foo#{i}', 'bar#{i}');")
   end
 end
 
-def assert_valid_database_setup
+def assert_valid_database_setup(options = {})
   fields = result_hashes("DESCRIBE test_table")
   assert_equal 3, fields.length
   assert_equal "id", fields[0]["Field"]
@@ -60,9 +60,7 @@ def assert_valid_database_setup
   assert_equal "foo", indexes[1]["Column_name"]
 
   results = result_hashes("SELECT * FROM test_table")
-  assert_equal 5, results.length
-  assert_equal "foo2", results[2]["foo"]
-  assert_equal "bar3", results[3]["bar"]
+  assert_equal options[:fixture_row_count] || 5, results.length
 end
 
 def result_hashes(query)
@@ -78,14 +76,14 @@ def result_hashes(query)
 end
 
 module DatabaseTest
-  def test_against_all_configs(name, &block)
+  def test_against_all_configs(name, options = {}, &block)
     TEST_CONFIGS.each do |config|
       self.send(:define_method, :"test_#{name.to_s}_with_#{config}") do
           silence_stream($stdout) do
           load_schema(config)
-          load_fixtures
+          load_fixtures options
         end
-        assert_valid_database_setup
+        assert_valid_database_setup options
         block.bind(self).call
       end
     end

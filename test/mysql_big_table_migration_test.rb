@@ -36,6 +36,15 @@ class MysqlBigTableMigrationTest < Test::Unit::TestCase
     assert_equal 5, test_table_rows.length
   end
 
+
+  test_against_all_configs :with_exactly_one_row, fixture_row_count: 1 do
+    silence_stream($stdout) do
+      ActiveRecord::Migration.send(:with_tmp_table, :test_table) {}
+    end
+
+    assert_equal 1, test_table_rows.length
+  end
+
   test_against_all_configs :add_column_using_tmp_table do
     silence_stream($stdout) do
       ActiveRecord::Migration.add_column_using_tmp_table(:test_table, :baz, :string)

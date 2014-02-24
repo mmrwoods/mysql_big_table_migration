@@ -101,7 +101,7 @@ module MySQLBigTableMigration
         say "Inserting into temporary table in batches of #{batch_size}..."
         say "Approximately #{max_id_before_migration-start+1} rows to process, first row has id #{start}", true
         while counter <= ( max = fetch_result_row(connection.execute("SELECT MAX(id) FROM #{table_name}"))[0].to_i )
-          percentage_complete = ( ( ( counter - start ).to_f / ( max - start ).to_f ) * 100 ).to_i
+          percentage_complete = mysql_big_table_migration_completion start, counter, max
           say "Processing rows with ids between #{counter} and #{(counter+batch_size)-1} (#{percentage_complete}% complete)", true
           connection.execute("INSERT INTO #{new_table_name} (#{new_column_list}) SELECT #{old_column_list} FROM #{table_name} WHERE id >= #{counter} AND id < #{counter + batch_size}")
           counter = counter + batch_size
@@ -134,6 +134,10 @@ module MySQLBigTableMigration
   end
 
   private
+
+  def mysql_big_table_migration_completion(start, counter, max)
+    ((counter - start + 1).to_f / (( max - start + 1).to_f ) * 100 ).to_i
+  end
 
   def mysql_big_table_migration_bach_size
     10000
