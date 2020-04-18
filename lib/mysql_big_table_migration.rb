@@ -89,7 +89,7 @@ module MySQLBigTableMigration
       old_column_list = column_list(shared_columns + rename_columns.keys)
       new_column_list = column_list(shared_columns + rename_columns.values)
 
-      timestamp_before_migration = fetch_result_row(connection.execute("SELECT CURRENT_TIMESTAMP"))[0] # note: string, not time object
+      timestamp_before_migration = fetch_result_row(connection.execute("SELECT CAST(CURRENT_TIMESTAMP AS CHAR)"))[0] # note: we want a string
       max_id_before_migration = fetch_result_row(connection.execute("SELECT MAX(id) FROM #{table_name}"))[0].to_i
 
       if max_id_before_migration == 0
